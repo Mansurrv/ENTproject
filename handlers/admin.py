@@ -94,79 +94,111 @@ async def del_msg(msg: Message):
         await msg.answer("❌ Пожалуйста, укажите текст вопроса, который нужно удалить. Пример:\n`/delete Какой город столица Казахстана?`")
 
 
+# Проверка прав администратора
+async def is_admin(msg: Message):
+    return await db.is_admin(msg.from_user.id)
+
 # Обработка кнопки "📥 Добавить вопрос"
 @admin_router.message(F.text == "📥 Добавить вопрос")
 async def add_question_start(msg: Message, state: FSMContext):
-    await msg.answer("Введите тему вопроса:")
-    await state.set_state(AddQuestion.topic)
+    if await is_admin(msg):
+        await msg.answer("Введите тему вопроса:")
+        await state.set_state(AddQuestion.topic)
+    else:
+        await msg.answer("У вас нет прав для добавления вопроса.")
 
 @admin_router.message(F.text == "📄 Посмотреть все вопросы")
 async def view_all_questions(msg: Message):
-    questions = await db.get_question()
-    if questions:
-        message = "Сұрақтар және жауабы:\n\n"
-        for question in questions:
-            message += f"\"{question['question']}\" - {question['correct_option']}\n"
-        print(len(questions), (questions))
-        await msg.answer(message)
+    if await is_admin(msg):
+        questions = await db.get_question()
+        if questions:
+            message = "Сұрақтар және жауабы:\n\n"
+            for question in questions:
+                message += f"\"{question['question']}\" - {question['correct_option']}\n"
+            print(len(questions), (questions))
+            await msg.answer(message)
+        else:
+            await msg.answer("Нет вопросов в базе данных.", reply_markup=admin_panel_kb())
     else:
-        await msg.answer("Нет вопросов в базе данных.", reply_markup=admin_panel_kb())
+        await msg.answer("У вас нет прав для просмотра вопросов.")
 
 @admin_router.message(AddQuestion.topic)
 async def get_topic(msg: Message, state: FSMContext):
-    await state.update_data(topic=msg.text)
-    await msg.answer("Введите сам вопрос:")
-    await state.set_state(AddQuestion.question)
+    if await is_admin(msg):
+        await state.update_data(topic=msg.text)
+        await msg.answer("Введите сам вопрос:")
+        await state.set_state(AddQuestion.question)
+    else:
+        await msg.answer("У вас нет прав для добавления вопроса.")
 
 @admin_router.message(AddQuestion.question)
 async def get_question(msg: Message, state: FSMContext):
-    await state.update_data(question=msg.text)
-    await msg.answer("Вариант A:")
-    await state.set_state(AddQuestion.option_a)
+    if await is_admin(msg):
+        await state.update_data(question=msg.text)
+        await msg.answer("Вариант A:")
+        await state.set_state(AddQuestion.option_a)
+    else:
+        await msg.answer("У вас нет прав для добавления вопроса.")
 
 @admin_router.message(AddQuestion.option_a)
 async def get_a(msg: Message, state: FSMContext):
-    await state.update_data(a=msg.text)
-    await msg.answer("Вариант B:")
-    await state.set_state(AddQuestion.option_b)
+    if await is_admin(msg):
+        await state.update_data(a=msg.text)
+        await msg.answer("Вариант B:")
+        await state.set_state(AddQuestion.option_b)
+    else:
+        await msg.answer("У вас нет прав для добавления вопроса.")
 
 @admin_router.message(AddQuestion.option_b)
 async def get_b(msg: Message, state: FSMContext):
-    await state.update_data(b=msg.text)
-    await msg.answer("Вариант C:")
-    await state.set_state(AddQuestion.option_c)
+    if await is_admin(msg):
+        await state.update_data(b=msg.text)
+        await msg.answer("Вариант C:")
+        await state.set_state(AddQuestion.option_c)
+    else:
+        await msg.answer("У вас нет прав для добавления вопроса.")
 
 @admin_router.message(AddQuestion.option_c)
 async def get_c(msg: Message, state: FSMContext):
-    await state.update_data(c=msg.text)
-    await msg.answer("Вариант D:")
-    await state.set_state(AddQuestion.option_d)
+    if await is_admin(msg):
+        await state.update_data(c=msg.text)
+        await msg.answer("Вариант D:")
+        await state.set_state(AddQuestion.option_d)
+    else:
+        await msg.answer("У вас нет прав для добавления вопроса.")
 
 @admin_router.message(AddQuestion.option_d)
 async def get_d(msg: Message, state: FSMContext):
-    await state.update_data(d=msg.text)
-    await msg.answer("Укажите правильный вариант (A/B/C/D):")
-    await state.set_state(AddQuestion.correct)
+    if await is_admin(msg):
+        await state.update_data(d=msg.text)
+        await msg.answer("Укажите правильный вариант (A/B/C/D):")
+        await state.set_state(AddQuestion.correct)
+    else:
+        await msg.answer("У вас нет прав для добавления вопроса.")
 
 @admin_router.message(AddQuestion.correct)
 async def save_question(msg: Message, state: FSMContext):
-    correct = msg.text.strip().upper()
-    if correct not in ["A", "B", "C", "D"]:
-        await msg.answer("Введите только A, B, C или D.")
-        return
-    await state.update_data(correct=correct)
+    if await is_admin(msg):
+        correct = msg.text.strip().upper()
+        if correct not in ["A", "B", "C", "D"]:
+            await msg.answer("Введите только A, B, C или D.")
+            return
+        await state.update_data(correct=correct)
 
-    data = await state.get_data()
-    await db.add_question(
-        topic=data['topic'],
-        question=data['question'],
-        a=data['a'],
-        b=data['b'],
-        c=data['c'],
-        d=data['d'],
-        correct=correct
-    )
-    await msg.answer("✅ Вопрос успешно добавлен!", reply_markup=admin_panel_kb())
-    await state.clear()
+        data = await state.get_data()
+        await db.add_question(
+            topic=data['topic'],
+            question=data['question'],
+            a=data['a'],
+            b=data['b'],
+            c=data['c'],
+            d=data['d'],
+            correct=correct
+        )
+        await msg.answer("✅ Вопрос успешно добавлен!", reply_markup=admin_panel_kb())
+        await state.clear()
+    else:
+        await msg.answer("У вас нет прав для добавления вопроса.")
+
 
 
