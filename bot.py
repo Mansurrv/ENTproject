@@ -6,13 +6,13 @@ from database import db  # Используем глобальный объек�
 from handlers import admin
 from handlers import user
 
+bot = Bot(BOT_TOKEN)
+dp = Dispatcher()
+    
 async def main():
     await db.connect()  # Подключение к базе данных
     await db.create_tables()  # Создание таблиц, если они не существуют
 
-    bot = Bot(BOT_TOKEN)
-    dp = Dispatcher()
-    
     dp.include_router(admin.admin_router)
     dp.include_router(user.user_router)
     await dp.start_polling(bot)
